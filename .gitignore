@@ -171,5 +171,5 @@ cython_debug/
 .pypirc
 
 # project specific files
-dowload/
+download/
 log.txt
