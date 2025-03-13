@@ -1,3 +1,6 @@
+################################################
+# Run to download the fits files (85Go total)  #
+################################################
 import os
 import requests
 import time
