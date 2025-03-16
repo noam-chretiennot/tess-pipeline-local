@@ -1,15 +1,19 @@
+"""
+Module for downloading FITS files and uploading them to S3
+"""
+
 import os
-import requests
 import time
-import boto3
 import argparse
-from boto3.exceptions import S3UploadFailedError
-from botocore.exceptions import BotoCoreError
 from concurrent.futures import ThreadPoolExecutor
+import requests
+import boto3
+from botocore.exceptions import BotoCoreError
+from boto3.exceptions import S3UploadFailedError
 from boto3.s3.transfer import TransferConfig
 
 
-def dowload_fits():
+def download_fits():
     """Download FITS files from the given URLs."""
     input_file = "./tess_ffic_sector_1_tiny_urls.txt"  # File containing URLs
     download_folder = "./download"
@@ -20,8 +24,8 @@ def dowload_fits():
 
     file_urls = []
     # Open log file
-    with open(log_file, "w") as log:
-        with open(input_file, "r") as infile:
+    with open(log_file, "w", encoding='utf-8') as log:
+        with open(input_file, "r", encoding='utf-8') as infile:
             for url in infile:
                 url = url.strip()
                 if not url:
@@ -109,16 +113,20 @@ def upload_file(s3_client, file, bucket_name, transfer_config):
         print(f"Error uploading {file}: {e}")
 
 
-
 def main():
+    """Parse arguments and manage the download and upload process."""
     parser = argparse.ArgumentParser(description="Download and process FITS files")
-    parser.add_argument('--output-dir', type=str, default='data/raw', help='Output directory for data')
-    parser.add_argument('--endpoint-url', type=str, default='http://localhost:4566', help='URL of the S3 endpoint (LocalStack)')
+    parser.add_argument('--output-dir',
+                        type=str, default='data/raw',
+                        help='Output directory for data')
+    parser.add_argument('--endpoint-url', type=str,
+                        default='http://localhost:4566',
+                        help='URL of the S3 endpoint (LocalStack)')
     
     args = parser.parse_args()
     
     print("Downloading data...")
-    file_urls = dowload_fits()
+    file_urls = download_fits()
     print("Data downloaded and organized.")
     
     print("Uploading files...")
@@ -127,4 +135,4 @@ def main():
 
 
 if __name__ == "__main__":
-    upload_to_s3("http://localhost:9000", dowload_fits())
+    main()
