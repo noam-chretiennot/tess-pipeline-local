@@ -1,5 +1,9 @@
-# a simple hello world program to test Airflow
+"""
+A simple hello world program to test Airflow.
+"""
+
 def hello():
+    """Prints 'Hello World!' to the console."""
     print("Hello World!")
 
 

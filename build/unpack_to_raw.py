@@ -3,8 +3,10 @@ import requests
 import time
 import boto3
 import argparse
-from boto3.s3.transfer import TransferConfig
+from boto3.exceptions import S3UploadFailedError
+from botocore.exceptions import BotoCoreError
 from concurrent.futures import ThreadPoolExecutor
+from boto3.s3.transfer import TransferConfig
 
 
 def dowload_fits():
@@ -69,6 +71,7 @@ def upload_to_s3(endpoint_url, file_urls):
 
     bucket_name = "raw-ffi"
 
+    # Optimize multipart uploads for 40MB files
     transfer_config = TransferConfig(
         multipart_threshold=10 * 1024 * 1024,
         multipart_chunksize=10 * 1024 * 1024,
@@ -102,8 +105,9 @@ def upload_file(s3_client, file, bucket_name, transfer_config):
             Config=transfer_config
         )
         print(f"Uploaded: {file} -> s3://{bucket_name}/{os.path.basename(file)}")
-    except Exception as e:
+    except (S3UploadFailedError, BotoCoreError) as e:
         print(f"Error uploading {file}: {e}")
+
 
 
 def main():

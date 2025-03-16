@@ -1,13 +1,12 @@
-import boto3
-import requests
-from botocore.exceptions import ClientError
-import dotenv
-import time
 import os
+import time
 import argparse
+import boto3
+from botocore.exceptions import ClientError
+
 
 def init_localstack(endpoint, access_key, secret_key):
-    """Create necessary buckets in S3"""
+    """Create necessary S3 buckets in LocalStack."""
     s3_client = boto3.client(
         "s3",
         endpoint_url=endpoint,
@@ -27,18 +26,11 @@ def init_localstack(endpoint, access_key, secret_key):
             print(f"Error creating bucket {bucket}: {e}")
 
     list_buckets = s3_client.list_buckets()
-    print(f"List of buckets: {list_buckets}")
+    print(f"List of buckets: {[b['Name'] for b in list_buckets.get('Buckets', [])]}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Initialize localstack")
-    parser.add_argument("--endpoint", type=str, required=True, help="Localstack endpoint")
-    parser.add_argument("--access_key", type=str, required=True, help="Localstack access key")
-    parser.add_argument("--secret_key", type=str, required=True, help="Localstack secret key")
-    args = parser.parse_args()
-
-    init_localstack(args.endpoint, args.access_key, args.secret_key)
-
-if __name__ == "__main__":
-    init_localstack("http://localhost:9000", "minio", "test123minio")
-
+    """Parse arguments and initialize LocalStack S3."""
+    parser = argparse.ArgumentParser(description="Initialize LocalStack with S3 buckets")
+    parser.add_argument("--endpoint", type=str, required=True, help="LocalStack S3 endpoint")
+    parser.add_argum

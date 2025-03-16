@@ -1,6 +1,10 @@
+"""
+A simple Airflow DAG that runs a Python script.
+"""
+
+from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from datetime import datetime, timedelta
 
 default_args = {
     'owner': 'airflow',
@@ -16,16 +20,15 @@ dag = DAG(
     'hello_world_dag',
     default_args=default_args,
     description='A test DAG',
-    schedule=timedelta(days=1),
+    schedule_interval=timedelta(days=1),  # Fixed incorrect argument name
 )
 
-# Tâche 1: Extraction vers raw
+# Task: Run a Python script
 hello_task = BashOperator(
     task_id='hello_task',
     bash_command='python /opt/airflow/scripts/hello.py',
     dag=dag,
 )
 
-
-# Définir l'ordre des tâches
+# Define task dependencies
 hello_task
