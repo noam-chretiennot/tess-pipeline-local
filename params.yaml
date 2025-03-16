@@ -1,0 +1,2 @@
+staging_data: .dvc/tmp/staging_data
+curated_data: .dvc/tmp/curated_data
