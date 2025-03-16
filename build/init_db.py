@@ -35,13 +35,13 @@ def main():
     """Parse arguments and initialize S3."""
     parser = argparse.ArgumentParser(description="Initialize LocalStack with S3 buckets")
     parser.add_argument("--endpoint", type=str,
-                        default="http://localhost:9000", 
+                        default="http://localhost:9000",
                         help="LocalStack S3 endpoint")
     parser.add_argument("--access_key", type=str,
-                        default="minio", 
+                        default="minio",
                         help="LocalStack access key")
-    parser.add_argument("--secret_key", type=str, 
-                        default="test123minio", 
+    parser.add_argument("--secret_key", type=str,
+                        default="test123minio",
                         help="LocalStack secret key")
 
     args = parser.parse_args()
