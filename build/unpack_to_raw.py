@@ -30,7 +30,7 @@ def download_fits():
                 url = url.strip()
                 if not url:
                     continue
-                
+
                 filename = os.path.join(download_folder, url.split("/")[-1])
 
                 # Check if file is present in the download folder
@@ -45,11 +45,11 @@ def download_fits():
                         try:
                             response = requests.get(url, stream=True)
                             response.raise_for_status()
-                            
+ 
                             with open(filename, "wb") as file:
                                 for chunk in response.iter_content(chunk_size=8192):
                                     file.write(chunk)
-                            
+
                             log.write(f"SUCCESS: Downloaded {url} -> {filename}\n")
                             file_urls.append(filename)
                         except requests.RequestException as e:
@@ -59,7 +59,7 @@ def download_fits():
                             if cpt == 5:
                                 log.write(f"ERROR: Failed to download {url} - {e}\n")
                                 print(f"Failed: {url}")
-    
+
     print("Download completed. Check log.txt for details.")
     return file_urls
 
@@ -87,14 +87,13 @@ def upload_to_s3(endpoint_url, file_urls):
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = []
         for file in file_urls:
-            futures.append(executor.submit(upload_file, s3_client, file, bucket_name, transfer_config))
-        
+            futures.append(
+                executor.submit(upload_file, s3_client, file, bucket_name, transfer_config)
+            )
+
         # Wait for all futures to complete
         for future in futures:
-            try:
-                future.result()  # Raise any exception encountered during the upload
-            except Exception as e:
-                print(f"Error uploading: {e}")
+            future.result()
 
     print("All files uploaded successfully.")
 
@@ -116,19 +115,16 @@ def upload_file(s3_client, file, bucket_name, transfer_config):
 def main():
     """Parse arguments and manage the download and upload process."""
     parser = argparse.ArgumentParser(description="Download and process FITS files")
-    parser.add_argument('--output-dir',
-                        type=str, default='data/raw',
-                        help='Output directory for data')
     parser.add_argument('--endpoint-url', type=str,
-                        default='http://localhost:4566',
+                        default='http://localhost:9000',
                         help='URL of the S3 endpoint (LocalStack)')
-    
+
     args = parser.parse_args()
-    
+
     print("Downloading data...")
     file_urls = download_fits()
     print("Data downloaded and organized.")
-    
+
     print("Uploading files...")
     upload_to_s3(args.endpoint_url, file_urls)
     print("Processing completed.")
