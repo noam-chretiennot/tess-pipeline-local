@@ -1,0 +1,44 @@
+vars:
+  - params.yaml
+
+stages:
+  unpack_to_raw:
+    cmd: >
+      python build/unpack_to_raw.py 
+      --output-dir data/raw 
+      --endpoint-url http://localhost:4566
+    deps:
+      - build/unpack_to_raw.py
+      - params.yaml
+    outs:
+      - data/raw
+      
+  preprocess_to_staging:
+    cmd: >
+      python src/preprocess_to_staging.py 
+      --bucket_raw raw 
+      --db_host localhost 
+      --db_user root 
+      --db_password root 
+      --endpoint-url http://localhost:4566
+    deps:
+      - src/preprocess_to_staging.py
+      - data/raw
+      - params.yaml
+    outs:
+      - ${staging_data}:
+          cache: false
+
+  process_to_curated:
+    cmd: >
+      python src/process_to_curated.py 
+      --mysql_host localhost 
+      --mysql_user root 
+      --mysql_password root 
+      --mongo_uri mongodb://localhost:27017/
+    deps:
+      - src/process_to_curated.py
+      - params.yaml
+    outs:
+      - ${curated_data}:
+          cache: false
