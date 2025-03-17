@@ -1,6 +1,9 @@
-import os
-import boto3
+"""
+This script downloads all FITS files from a MinIO bucket,
+extracts metadata from them, and stores the metadata in a Cassandra database.
+"""
 import tempfile
+import boto3
 from cassandra.cluster import Cluster
 from astropy.io import fits
 from model.AstroFileMetadata import AstroFileMetadata
@@ -25,16 +28,10 @@ def list_files():
     response = s3_client.list_objects_v2(Bucket=BUCKET_NAME)
     return [obj["Key"] for obj in response.get("Contents", [])]
 
-def download_file(file_key):
-    """Download a file from MinIO to a temporary location."""
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    s3_client.download_file(BUCKET_NAME, file_key, temp_file.name)
-    return temp_file.name
-
 def process_fits_file(file_path, file_key):
     """Extract metadata from a FITS file and store it in Cassandra."""
     with fits.open(file_path) as hdul:
-        metadata = AstroFileMetadata.Parse_fits_file(hdul, filename=file_key)
+        metadata = AstroFileMetadata.parse_fits_file(hdul, filename=file_key)
 
         # Get field names & values dynamically
         metadata_dict = metadata.model_dump()
@@ -44,8 +41,8 @@ def process_fits_file(file_path, file_key):
             if value is None or value == '':
                 print(f"Warning: Field {key} is empty or None.")
 
-        fields = ", ".join(metadata_dict.keys())  # "filename, bucket, s3_path, camera, ccd, date_obs, ..."
-        placeholders = ", ".join(["%s"] * len(metadata_dict))  # "%s, %s, %s, %s, %s, ..."
+        fields = ", ".join(metadata_dict.keys())
+        placeholders = ", ".join(["%s"] * len(metadata_dict))
         values = tuple(metadata_dict.values())
 
         # Dynamically construct the query
@@ -57,9 +54,12 @@ def main():
     files = list_files()
 
     for file_key in files:
-        file_path = download_file(file_key)
-        process_fits_file(file_path, file_key)
-        os.remove(file_path)  # Clean up temp file
+        with tempfile.NamedTemporaryFile() as temp_file:
+            # Download the file to the temporary location
+            s3_client.download_file(BUCKET_NAME, file_key, temp_file.name)
+            
+            # Process the FITS file
+            process_fits_file(temp_file.name, file_key)
 
     print("All files processed and stored in Cassandra.")
 

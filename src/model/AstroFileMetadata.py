@@ -1,7 +1,7 @@
 """
 Model and Parser for the metadata of TESS files.
 
-See documentation at https://archive.stsci.edu/missions/tess/doc/EXP-TESS-ARC-ICD-TM-0014.pdf#page=17
+See documentation : https://archive.stsci.edu/missions/tess/doc/EXP-TESS-ARC-ICD-TM-0014.pdf#page=17
 """
 
 import re
@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from astropy.io import fits
 
 class AstroFileMetadata(BaseModel):
+    """Model for the metadata of TESS files. (fits only for now)"""
     filename: str
     ap_0_1: float
     ap_0_2: float
@@ -224,7 +225,7 @@ class AstroFileMetadata(BaseModel):
         return key_value
 
     @classmethod
-    def Parse_fits_header(cls, header: str, filename:str=""):
+    def parse_fits_header(cls, header: str, filename:str=""):
         """Parse the FITS header and return an AstroFileMetadata object."""
         header_lines = header.split('\n')
 
@@ -236,8 +237,8 @@ class AstroFileMetadata(BaseModel):
         return cls(**header_dict)
 
     @classmethod
-    def Parse_fits_file(cls, file: fits.hdu.hdulist.HDUList, filename:str=""):
+    def parse_fits_file(cls, file: fits.hdu.hdulist.HDUList, filename:str=""):
         """Parse a FITS file and return an AstroFileMetadata object."""
         hdu = file[1] # ignore the primary header
 
-        return cls.Parse_fits_header(hdu.header.tostring(sep='\n'), filename)
+        return cls.parse_fits_header(hdu.header.tostring(sep='\n'), filename)
