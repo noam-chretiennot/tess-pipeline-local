@@ -57,7 +57,7 @@ def main():
         with tempfile.NamedTemporaryFile() as temp_file:
             # Download the file to the temporary location
             s3_client.download_file(BUCKET_NAME, file_key, temp_file.name)
-            
+
             # Process the FITS file
             process_fits_file(temp_file.name, file_key)
 
