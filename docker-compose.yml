@@ -1,46 +1,41 @@
+# DO NOT USE THIS DEPLOYMENT FOR PRODUCTION ENVIRONMENT : NOT SECURE
 version: '3.8'
 
 services:
+  # DataLake services
   minio:
     image: minio/minio
     container_name: minio
     environment:
-      MINIO_ROOT_USER: "minio"  # Replace with your MinIO access key
-      MINIO_ROOT_PASSWORD: "test123minio"  # Replace with your MinIO secret key
+      MINIO_ROOT_USER: "minio"  # for testing purposes only
+      MINIO_ROOT_PASSWORD: "test123minio"  # for testing purposes only
     ports:
       - "9000:9000"  # MinIO's default web interface
       - "9001:9001"  # MinIO's default console (optional, for monitoring) 
     command: server /data --console-address ":9001" 
-    # volumes:
-    #   - minio_data:/data  # Persistent data storage
+    volumes:
+      - minio_data:/data  # Persistent data storage
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
+  # DataWarehouse services
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra
     ports:
-      - "27017:27017"
-
-  mysql:
-    container_name: mysql
-    image: mysql:latest
-    environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=staging
-    ports:
-      - "3306:3306"
+      - "9042:9042"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - cassandra_data:/var/lib/cassandra
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      interval: 30s
+      timeout: 10s
       retries: 5
 
+  # Airflow services
   postgres:
     image: postgres:13
     container_name: postgres
@@ -126,7 +121,7 @@ services:
       - ./dataset:/opt/airflow/dataset
 
 volumes:
-  elasticsearch-data:
   mysql_data:
   postgres_data:
   minio_data:
+  cassandra_data:
