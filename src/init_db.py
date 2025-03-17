@@ -3,8 +3,11 @@ Module to initialize Minio with necessary S3 buckets.
 """
 
 import argparse
+from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
+from cassandra.cluster import Cluster
+from model.AstroFileMetadata import AstroFileMetadata
 
 
 def init_localstack(endpoint, access_key, secret_key):
@@ -31,6 +34,37 @@ def init_localstack(endpoint, access_key, secret_key):
     print(f"List of buckets: {[b['Name'] for b in list_buckets.get('Buckets', [])]}")
 
 
+def create_table():
+    """Create a table in Cassandra to store FITS file metadata."""
+    cluster = Cluster(['localhost'])
+    session = cluster.connect()
+
+    session.execute("""
+        CREATE KEYSPACE IF NOT EXISTS fits_metadata
+        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+    """)
+
+    session.set_keyspace('fits_metadata')
+
+    columns = []
+    for field, field_type in AstroFileMetadata.__annotations__.items():
+        cassandra_type = {
+            int: "INT",
+            float: "DOUBLE",
+            str: "TEXT",
+            datetime: "TIMESTAMP"
+        }.get(field_type, "TEXT")  # Default to TEXT if unknown
+
+        columns.append(f"{field} {cassandra_type}")
+    columns[0] += " PRIMARY KEY"
+
+    table_schema = ",\n    ".join(columns)
+    create_table_query = f"CREATE TABLE IF NOT EXISTS metadata (\n    {table_schema}\n);"
+    session.execute(create_table_query)
+
+    print("Cassandra table created successfully.")
+
+
 def main():
     """Parse arguments and initialize S3."""
     parser = argparse.ArgumentParser(description="Initialize LocalStack with S3 buckets")
@@ -46,6 +80,8 @@ def main():
 
     args = parser.parse_args()
     init_localstack(args.endpoint, args.access_key, args.secret_key)
+
+    create_table()
 
 
 if __name__ == "__main__":
