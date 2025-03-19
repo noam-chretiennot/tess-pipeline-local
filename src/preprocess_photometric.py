@@ -22,6 +22,7 @@ import io
 from typing import Tuple, List, Dict
 import numpy as np
 import boto3
+from botocore.exceptions import ClientError
 from astropy.io import fits
 from pymongo import MongoClient
 from scipy.ndimage import median_filter
@@ -300,7 +301,7 @@ def process_single_ffi(doc: Dict) -> str:
 
     try:
         raw_image = download_fits_from_s3(s3_key)
-    except boto3.exceptions.ClientError as e:
+    except ClientError as e:
         return f"Error downloading {s3_key}: {e}"
 
     side, vertical = get_ccd_position(ccd)
@@ -310,7 +311,7 @@ def process_single_ffi(doc: Dict) -> str:
     try:
         upload_processed_image_to_s3(processed_image, CORRECTED_BUCKET, key)
         return f"Processed {s3_key} successfully."
-    except boto3.exceptions.S3UploadFailedError as e:
+    except ClientError as e:
         return f"Error uploading {s3_key}: {e}"
 
 def main() -> None:
