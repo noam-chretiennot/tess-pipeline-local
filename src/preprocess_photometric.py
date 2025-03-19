@@ -300,7 +300,7 @@ def process_single_ffi(doc: Dict) -> str:
 
     try:
         raw_image = download_fits_from_s3(s3_key)
-    except boto3.exceptions.S3DownloadFailedError as e:
+    except boto3.exceptions.ClientError as e:
         return f"Error downloading {s3_key}: {e}"
 
     side, vertical = get_ccd_position(ccd)
