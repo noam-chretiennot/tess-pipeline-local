@@ -73,7 +73,7 @@ def upload_to_s3(endpoint_url, file_urls):
         aws_secret_access_key="test123minio"
     )
 
-    bucket_name = "raw-ffi"
+    bucket_name = "raw-ffic"
 
     # Optimize multipart uploads for 40MB files
     transfer_config = TransferConfig(

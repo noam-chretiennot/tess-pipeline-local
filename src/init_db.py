@@ -1,13 +1,11 @@
 """
-Module to initialize Minio with necessary S3 buckets.
+Module to initialize Minio and MongoDB before unpacking the files.
 """
 
 import argparse
-from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
-from cassandra.cluster import Cluster
-from model.AstroFileMetadata import AstroFileMetadata
+from pymongo import MongoClient
 
 
 def init_localstack(endpoint, access_key, secret_key):
@@ -21,7 +19,7 @@ def init_localstack(endpoint, access_key, secret_key):
 
     print("Creating buckets in S3...")
 
-    buckets = ["raw-ffi", "silver-light-curves", "cache-ffi-cuts"]
+    buckets = ["raw-ffic", "corrected-ffic"]
 
     for bucket in buckets:
         try:
@@ -34,39 +32,20 @@ def init_localstack(endpoint, access_key, secret_key):
     print(f"List of buckets: {[b['Name'] for b in list_buckets.get('Buckets', [])]}")
 
 
-def create_table():
-    """Create a table in Cassandra to store FITS file metadata."""
-    cluster = Cluster(['localhost'])
-    session = cluster.connect()
-
-    session.execute("""
-        CREATE KEYSPACE IF NOT EXISTS fits_metadata
-        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
-    """)
-
-    session.set_keyspace('fits_metadata')
-
-    columns = []
-    for field, field_type in AstroFileMetadata.__annotations__.items():
-        cassandra_type = {
-            int: "INT",
-            float: "DOUBLE",
-            str: "TEXT",
-            datetime: "TIMESTAMP"
-        }.get(field_type, "TEXT")  # Default to TEXT if unknown
-
-        columns.append(f"{field} {cassandra_type}")
-    columns[0] += " PRIMARY KEY"
-
-    table_schema = ",\n    ".join(columns)
-    create_table_query = f"CREATE TABLE IF NOT EXISTS metadata (\n    {table_schema}\n);"
-    session.execute(create_table_query)
-
-    print("Cassandra table created successfully.")
+def create_collection():
+    """
+    Initialize MongoDB collection to store FITS file metadata.
+    This replaces the Cassandra table creation.
+    """
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["fits_metadata"]
+    collection = db["metadata"]
+    print("MongoDB collection initialized successfully.")
+    return collection
 
 
 def main():
-    """Parse arguments and initialize S3."""
+    """Parse arguments and initialize S3 and MongoDB."""
     parser = argparse.ArgumentParser(description="Initialize LocalStack with S3 buckets")
     parser.add_argument("--endpoint", type=str,
                         default="http://localhost:9000",
@@ -81,7 +60,8 @@ def main():
     args = parser.parse_args()
     init_localstack(args.endpoint, args.access_key, args.secret_key)
 
-    create_table()
+    # Initialize MongoDB collection (replaces the Cassandra table creation)
+    create_collection()
 
 
 if __name__ == "__main__":

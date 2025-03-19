@@ -1,6 +1,4 @@
 # DO NOT USE THIS DEPLOYMENT FOR PRODUCTION ENVIRONMENT : NOT SECURE
-version: '3.8'
-
 services:
   # DataLake services
   minio:
@@ -21,16 +19,15 @@ services:
       timeout: 10s
       retries: 5
 
-  # DataWarehouse services
-  cassandra:
-    image: cassandra:latest
-    container_name: cassandra
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
     ports:
-      - "9042:9042"
+      - "27017:27017"
     volumes:
-      - cassandra_data:/var/lib/cassandra
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "cqlsh", "-e", "DESCRIBE KEYSPACES"]
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -124,4 +121,4 @@ volumes:
   mysql_data:
   postgres_data:
   minio_data:
-  cassandra_data:
+  mongo_data:
