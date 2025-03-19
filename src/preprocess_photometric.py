@@ -208,7 +208,7 @@ def iterative_background_estimation(image: np.ndarray, side: str, vertical: str,
     Args:
         image (np.ndarray): Input image data
         side (str): Horizontal position ("left" or "right") of CCD relative to the camera
-        vertical (str, optional): Vertical position ("left" or "right") of CCD relative to the camera
+        vertical (str, optional): Vertical position ("up" or "down") of CCD relative to the camera
         iterations (int, optional): Number of iterations to refine the background estimate
         tile_size (int, optional): Size of the square tiles for background estimation
         start_radius (int, optional): Starting radius for radial background estimation
@@ -241,7 +241,7 @@ def process_image(image: np.ndarray, side: str, vertical: str = "top") -> np.nda
     Args:
         image (np.ndarray): The raw input image data.
         side (str): Horizontal position ("left" or "right") of CCD relative to the camera
-        vertical (str, optional): Vertical position ("left" or "right") of CCD relative to the camera
+        vertical (str, optional): Vertical position ("up" or "down") of CCD relative to the camera
 
     Returns:
         np.ndarray: The processed image with the background subtracted.
@@ -261,7 +261,7 @@ def get_ccd_position(ccd: int) -> Tuple[str, str]:
         ccd (int): The CCD identifier (expected values: 1, 2, 3, or 4).
 
     Returns:
-        Tuple[str, str]: A tuple containing the side ("left" or "right") and vertical ("top" or "bottom") parameters.
+        Tuple[str, str]: A tuple containing the horizontal and vertical parameters.
 
     Raises:
         ValueError: If the CCD number is not one of the expected values.
@@ -294,19 +294,24 @@ def process_single_ffi(doc: Dict) -> str:
     Returns:
         str: A status message indicating success or failure for the processed file.
     """
-    try:
-        ffi_metadata = AstroFileMetadata.model_validate(doc)
-        s3_key: str = ffi_metadata.filename
-        ccd: int = ffi_metadata.ccd
+    ffi_metadata = AstroFileMetadata.model_validate(doc)
+    s3_key: str = ffi_metadata.filename
+    ccd: int = ffi_metadata.ccd
 
+    try:
         raw_image = download_fits_from_s3(s3_key)
-        side, vertical = get_ccd_position(ccd)
-        processed_image = process_image(raw_image, side, vertical)
-        key = os.path.splitext(os.path.basename(s3_key))[0] + ".npy"
+    except boto3.exceptions.S3DownloadFailedError as e:
+        return f"Error downloading {s3_key}: {e}"
+
+    side, vertical = get_ccd_position(ccd)
+    processed_image = process_image(raw_image, side, vertical)
+    key = os.path.splitext(os.path.basename(s3_key))[0] + ".npy"
+
+    try:
         upload_processed_image_to_s3(processed_image, CORRECTED_BUCKET, key)
         return f"Processed {s3_key} successfully."
-    except Exception as e:
-        return f"Failed to process document with error: {e}"
+    except boto3.exceptions.S3UploadFailedError as e:
+        return f"Error uploading {s3_key}: {e}"
 
 def main() -> None:
     """

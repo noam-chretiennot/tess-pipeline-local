@@ -66,8 +66,8 @@ def process_fits_file(file_key: str) -> None:
     Download a FITS file from MinIO, extract metadata from it, and store the metadata in MongoDB.
 
     This function streams the FITS file associated with the given file key from the MinIO bucket,
-    extracts metadata using the AstroFileMetadata class, and then inserts the metadata into the MongoDB
-    'metadata' collection.
+    extracts metadata using the AstroFileMetadata class, and then inserts the metadata into 
+    the MongoDB 'metadata' collection.
 
     Args:
         file_key (str): The key (filename) of the FITS file in the MinIO bucket.
