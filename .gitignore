@@ -174,3 +174,5 @@ download/
 log.txt
 logs/*
 plugins
+test.py
+test.ipynb
