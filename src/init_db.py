@@ -2,10 +2,15 @@
 Module to initialize Minio and MongoDB before unpacking the files.
 """
 
-import argparse
 import boto3
 from botocore.exceptions import ClientError
 from pymongo import MongoClient
+
+# Test configuration (TODO: move these settings to a config file)
+S3_ENDPOINT = "http://localhost:9000"
+ACCESS_KEY = "minio"
+SECRET_KEY = "test123minio"
+MONGO_URI = "mongodb://localhost:27017/"
 
 
 def init_localstack(endpoint, access_key, secret_key):
@@ -32,36 +37,33 @@ def init_localstack(endpoint, access_key, secret_key):
     print(f"List of buckets: {[b['Name'] for b in list_buckets.get('Buckets', [])]}")
 
 
-def create_collection():
+def create_collection(mongo_uri):
     """
     Initialize MongoDB collection to store FITS file metadata.
-    This replaces the Cassandra table creation.
     """
-    client = MongoClient("mongodb://localhost:27017/")
-    db = client["fits_metadata"]
-    collection = db["metadata"]
-    print("MongoDB collection initialized successfully.")
-    return collection
+    client = MongoClient(mongo_uri)
+
+    # Initialize fits_metadata collections
+    meta_db = client["fits_metadata"]
+    meta_coll = meta_db["metadata"]
+
+    # Initialize stars collection
+    stars_db = client["stars"]
+    aperture_coll = stars_db["apertures"]
+    pixel_files_coll = stars_db["pixel_files"]
+
+    aperture_coll.create_index([("centroid", "2d")], min=-360, max=360)
+    aperture_coll.create_index([("cluster_label", 1)])
+
+    print("MongoDB collections and indexes initialized successfully.")
+    return aperture_coll
 
 
 def main():
     """Parse arguments and initialize S3 and MongoDB."""
-    parser = argparse.ArgumentParser(description="Initialize LocalStack with S3 buckets")
-    parser.add_argument("--endpoint", type=str,
-                        default="http://localhost:9000",
-                        help="LocalStack S3 endpoint")
-    parser.add_argument("--access_key", type=str,
-                        default="minio",
-                        help="LocalStack access key")
-    parser.add_argument("--secret_key", type=str,
-                        default="test123minio",
-                        help="LocalStack secret key")
+    init_localstack(S3_ENDPOINT, ACCESS_KEY, SECRET_KEY)
 
-    args = parser.parse_args()
-    init_localstack(args.endpoint, args.access_key, args.secret_key)
-
-    # Initialize MongoDB collection (replaces the Cassandra table creation)
-    create_collection()
+    create_collection(MONGO_URI)
 
 
 if __name__ == "__main__":

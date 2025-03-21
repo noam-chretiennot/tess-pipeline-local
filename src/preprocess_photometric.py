@@ -14,7 +14,6 @@ Documentation:
   https://iopscience.iop.org/article/10.3847/1538-3881/ac09f1/pdf
 """
 
-import os
 import gc
 from functools import reduce
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -27,7 +26,7 @@ from astropy.io import fits
 from pymongo import MongoClient
 from scipy.ndimage import median_filter
 from scipy.interpolate import RectBivariateSpline
-from model.AstroFileMetadata import AstroFileMetadata
+
 
 # Test configuration (TODO: move these settings to a config file)
 RAW_BUCKET = "raw-ffic"
@@ -57,7 +56,7 @@ def download_fits_from_s3(s3_key: str) -> np.ndarray:
     )
     try:
         with io.BytesIO() as mem_file:
-            s3_client.download_fileobj(RAW_BUCKET, s3_key, mem_file)
+            s3_client.download_fileobj(RAW_BUCKET, s3_key+".fits", mem_file)
             mem_file.seek(0)
             # Open the FITS file from memory and extract the image data from the second HDU.
             with fits.open(mem_file) as hdul:
@@ -248,10 +247,9 @@ def process_image(image: np.ndarray, side: str, vertical: str = "top") -> np.nda
         np.ndarray: The processed image with the background subtracted.
     """
     # Crop the image to remove the buffer rows and columns (see TESS handbook page 24)
-    cropped_image = image[:-30, 44:-44]
     # Estimate and subtract the background from the cropped image.
-    background = iterative_background_estimation(cropped_image, side, vertical=vertical)
-    processed_image = cropped_image - background
+    background = iterative_background_estimation(image, side, vertical=vertical)
+    processed_image = image - background
     return processed_image
 
 def get_ccd_position(ccd: int) -> Tuple[str, str]:
@@ -295,9 +293,9 @@ def process_single_ffi(doc: Dict) -> str:
     Returns:
         str: A status message indicating success or failure for the processed file.
     """
-    ffi_metadata = AstroFileMetadata.model_validate(doc)
-    s3_key: str = ffi_metadata.filename
-    ccd: int = ffi_metadata.ccd
+    s3_key: str = doc.get("filename")
+    ffi_metadata = doc.get("secondary_header")
+    ccd: int = ffi_metadata.get("CCD")
 
     try:
         raw_image = download_fits_from_s3(s3_key)
@@ -305,8 +303,11 @@ def process_single_ffi(doc: Dict) -> str:
         return f"Error downloading {s3_key}: {e}"
 
     side, vertical = get_ccd_position(ccd)
+
+    raw_image = raw_image[:-30, 44:-44] # Temporary crop buffer rows for stats
     processed_image = process_image(raw_image, side, vertical)
-    key = os.path.splitext(os.path.basename(s3_key))[0] + ".npy"
+    processed_image = np.pad(processed_image, ((0, 30), (44, 44)))
+    key = s3_key + ".npy"
 
     try:
         upload_processed_image_to_s3(processed_image, CORRECTED_BUCKET, key)
