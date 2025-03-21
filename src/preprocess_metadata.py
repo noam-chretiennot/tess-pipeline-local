@@ -1,20 +1,26 @@
 """
 This script downloads all FITS files from a MinIO bucket,
-extracts metadata from each file, and stores the metadata in MongoDB.
+extracts metadata (the raw HDU information) from each file, and stores the metadata in MongoDB.
+
+For each file, it stores:
+  - filename (with the ".fits" extension removed)
+  - primary_header (as a dictionary)
+  - secondary_header (as a dictionary, if available; otherwise None)
+
+This method avoids using a custom parser and converts the header directly via dict().
 """
 
 from concurrent.futures import ThreadPoolExecutor
 import io
+import os
 from typing import Tuple, List
 import boto3
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from astropy.io import fits
-from model.AstroFileMetadata import AstroFileMetadata
 
 # Test configuration (TODO: move these settings to a config file)
 RAW_BUCKET = "raw-ffic"
-CORRECTED_BUCKET = "corrected-ffic"
 S3_ENDPOINT = "http://localhost:9000"
 ACCESS_KEY = "minio"
 SECRET_KEY = "test123minio"
@@ -23,9 +29,6 @@ MONGO_URI = "mongodb://localhost:27017/"
 def get_s3_client() -> boto3.client:
     """
     Create and return a new S3 client to connect to the MinIO server.
-
-    Returns:
-        boto3.client: A new boto3 S3 client configured for the MinIO endpoint.
     """
     return boto3.client(
         "s3",
@@ -36,11 +39,7 @@ def get_s3_client() -> boto3.client:
 
 def get_mongo_collection() -> Tuple[MongoClient, Collection]:
     """
-    Create and return a MongoDB client and the collection for storing FITS metadata.
-
-    Returns:
-        tuple: A tuple (mongo_client, collection) where mongo_client is a MongoClient instance,
-               and collection is the 'metadata' collection from the 'fits_metadata' database.
+    Create and return a MongoDB client and the 'metadata' collection from the 'fits_metadata' database.
     """
     mongo_client = MongoClient(MONGO_URI)
     db = mongo_client["fits_metadata"]
@@ -49,53 +48,53 @@ def get_mongo_collection() -> Tuple[MongoClient, Collection]:
 def list_files() -> List[str]:
     """
     List all file keys in the designated MinIO bucket.
-
+    
     Returns:
         list: A list of file keys (strings) from the MinIO bucket.
     """
     s3_client = get_s3_client()
     try:
         response = s3_client.list_objects_v2(Bucket=RAW_BUCKET)
-        # Extract and return the file keys from the response, if any.
         return [obj["Key"] for obj in response.get("Contents", [])]
     finally:
-        s3_client.close()  # Ensure the S3 client connection is properly closed.
+        s3_client.close()
 
 def process_fits_file(file_key: str) -> None:
     """
-    Download a FITS file from MinIO, extract metadata from it, and store the metadata in MongoDB.
-
-    This function streams the FITS file associated with the given file key from the MinIO bucket,
-    extracts metadata using the AstroFileMetadata class, and then inserts the metadata into 
-    the MongoDB 'metadata' collection.
-
+    Download a FITS file from MinIO, extract raw header information, and store the metadata in MongoDB.
+    
+    The metadata stored includes:
+      - filename (with the ".fits" extension removed)
+      - primary_header: dictionary from HDU[0].header
+      - secondary_header: dictionary from HDU[1].header if available, else None
+    
     Args:
         file_key (str): The key (filename) of the FITS file in the MinIO bucket.
     """
     s3_client = get_s3_client()
     mongo_client, collection = get_mongo_collection()
     try:
-        # Retrieve the FITS file from the S3 bucket.
         response = s3_client.get_object(Bucket=RAW_BUCKET, Key=file_key)
-
         with fits.open(io.BytesIO(response['Body'].read())) as hdul:
-            # Extract metadata from the FITS file using AstroFileMetadata.
-            metadata = AstroFileMetadata\
-                .parse_fits_file(hdul, filename=file_key)\
-                .model_dump()
-
+            primary_header = dict(hdul[0].header)
+            secondary_header = dict(hdul[1].header) if len(hdul) > 1 else None
+            # Remove the ".fits" extension from filename
+            stored_filename = os.path.splitext(file_key)[0]
+            metadata = {
+                "filename": stored_filename,
+                "primary_header": primary_header,
+                "secondary_header": secondary_header
+            }
             collection.insert_one(metadata)
     finally:
-        # Close the S3 and MongoDB connections
         s3_client.close()
         mongo_client.close()
 
 def main():
     """
-    Process all FITS files from MinIO and store their metadata in MongoDB. In parrallel.
+    Process all FITS files from MinIO and store their raw HDU metadata in MongoDB in parallel.
     """
     files = list_files()
-
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(process_fits_file, file_key) for file_key in files]
         for future in futures:
