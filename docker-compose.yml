@@ -38,8 +38,6 @@ services:
       context: ./api
     container_name: api
     depends_on:
-      - minio
-      - mongodb
       - init
     environment:
       AWS_ACCESS_KEY_ID: minio
@@ -86,6 +84,7 @@ services:
     container_name: airflow-webserver
     depends_on:
       - postgres
+      - airflow-init
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -93,11 +92,9 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./build:/opt/airflow/build
-      - ./wait_init.sh:/opt/airflow/wait_init.sh
     ports:
       - "8081:8080"
-    entrypoint: ["/opt/airflow/wait_init.sh"]
-    command: webserver
+    entrypoint: ["/bin/sh", "-c", "sleep 10 && exec airflow webserver"]
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
