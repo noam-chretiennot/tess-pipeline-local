@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+boto3
+python-multipart
+pymongo
+astropy

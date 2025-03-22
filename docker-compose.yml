@@ -32,6 +32,44 @@ services:
       timeout: 10s
       retries: 5
 
+  # API services
+  api:
+    build:
+      context: ./api
+    container_name: api
+    depends_on:
+      - minio
+      - mongodb
+      - init
+    environment:
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: test123minio
+      S3_ENDPOINT: http://minio:9000
+      MONGO_URI: mongodb://mongodb:27017/
+    ports:
+      - "8000:8000"
+
+  # test API services
+  gui:
+    build:
+      context: ./gui
+    container_name: gui
+    environment:
+      API_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "8501:8501"
+
+  # init
+  init:
+    build:
+      context: ./init
+    container_name: init
+    depends_on:
+      - mongodb
+      - minio
+
   # Airflow services
   postgres:
     image: postgres:13
@@ -60,10 +98,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./scripts:/opt/airflow/scripts
       - ./build:/opt/airflow/build
-      - ./dataset:/opt/airflow/dataset
     ports:
       - "8081:8080"
     command: webserver
@@ -89,10 +124,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./scripts:/opt/airflow/scripts
       - ./build:/opt/airflow/build
-      - ./dataset:/opt/airflow/dataset
     command: scheduler
 
   airflow-init:
@@ -112,10 +144,7 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-      - ./scripts:/opt/airflow/scripts
       - ./build:/opt/airflow/build
-      - ./dataset:/opt/airflow/dataset
 
 volumes:
   mysql_data:
