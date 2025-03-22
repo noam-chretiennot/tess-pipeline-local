@@ -9,26 +9,28 @@ router = APIRouter()
 @router.get("/curated")
 def get_cluster_data():
     """
-    Randomly selects a cluster label and returns both light curve and aperture data for that cluster.
+    Randomly selects a cluster label and returns both light curve and aperture data for the cluster.
     Light curve data is gathered from stars.pixel_files.
     Aperture data is gathered from stars.apertures.
     """
     try:
         stars_db = mongo_client["stars"]
         pixel_coll = stars_db["pixel_files"]
-        
+
         # Get distinct cluster labels
         distinct_labels = pixel_coll.distinct("cluster_label")
         if not distinct_labels:
-            raise HTTPException(status_code=404, detail="No cluster labels found in pixel_files collection.")
-        
+            raise HTTPException(status_code=404, 
+                                detail="No cluster labels found in pixel_files collection.")
+
         chosen_label = random.choice(distinct_labels)
-        
+
         # Retrieve light curve data from pixel_files
         docs = list(pixel_coll.find({"cluster_label": chosen_label}).sort("obs_timestamp", 1))
         if not docs:
-            raise HTTPException(status_code=404, detail=f"No records found for cluster label: {chosen_label}")
-        
+            raise HTTPException(status_code=404, 
+                                detail=f"No records found for cluster label: {chosen_label}")
+
         timestamps = []
         cluster_fluxes = []
         mask_fluxes = []
@@ -50,7 +52,7 @@ def get_cluster_data():
                 timestamps.append(dt.isoformat())
                 cluster_fluxes.append(d.get("cluster_flux", 0))
                 mask_fluxes.append(d.get("mask_flux", 0))
-        
+
         # Retrieve aperture data from apertures collection
         apertures_coll = stars_db["apertures"]
         cluster_aperture = apertures_coll.find_one({"cluster_label": chosen_label})
@@ -60,7 +62,7 @@ def get_cluster_data():
         else:
             pixels = []
             centroid = None
-        
+
         return {
             "cluster_label": chosen_label,
             "light_curve": {

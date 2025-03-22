@@ -17,7 +17,7 @@ def stats():
             count = 0
             total_size = 0
         bucket_metrics[bucket] = {"object_count": count, "total_size": total_size}
-    
+
     # Collection metrics: loop over all non-system databases and their collections
     collections_metrics = {}
     system_dbs = ["admin", "config", "local"]

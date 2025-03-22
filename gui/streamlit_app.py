@@ -197,7 +197,8 @@ with st.form("staging_filter_form"):
             objects = staging_response.get("objects", [])
             if objects:
                 # Display object details in a DataFrame
-                df_staging = pd.DataFrame([{"Key": obj["Key"], "Size": obj["Size"]} for obj in objects])
+                df_staging = pd.DataFrame([{"Key": obj["Key"], "Size": obj["Size"]}\
+                                           for obj in objects])
                 st.dataframe(df_staging)
                 st.subheader("Staging Files - Direct Plotting")
                 # Loop through each staging object to display its image
@@ -210,10 +211,8 @@ with st.form("staging_filter_form"):
         except Exception as e:
             st.error(f"Error fetching staging bucket data: {e}")
 
-# -----------------------------------------------------------------------------
-# Cluster Data Section (Light Curve & Aperture)
-# -----------------------------------------------------------------------------
-st.header("Cluster Data (Light Curve & Aperture)")
+# ------------------------ Light Curve & Aperture ------------------------
+st.header("Star Data (Light Curve & Aperture)")
 if st.button("Fetch Random Cluster Data"):
     try:
         # Request a random cluster data document from the API
@@ -231,9 +230,11 @@ if st.button("Fetch Random Cluster Data"):
             dt_list = [Time(ts).datetime for ts in timestamps]
             fig, ax1 = plt.subplots(figsize=(10, 6))
             ax1.set_xlabel("Observation Timestamp")
-            ax1.set_ylabel("Cluster Flux", color="tab:blue")
+            ax1.set_ylabel("In aperture Flux", color="tab:blue")
             # Plot the cluster flux as a line with markers
-            l1 = ax1.plot(dt_list, cluster_fluxes, marker="o", linestyle="-", color="tab:blue", label="Cluster Flux")
+            l1 = ax1.plot(dt_list, cluster_fluxes,
+                          marker="o", linestyle="-", color="tab:blue",
+                          label="Cluster Flux")
             ax1.tick_params(axis="y", labelcolor="tab:blue")
             # Format the x-axis for dates
             ax1.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
@@ -241,7 +242,9 @@ if st.button("Fetch Random Cluster Data"):
             # Create a secondary y-axis for mask flux
             ax2 = ax1.twinx()
             ax2.set_ylabel("Mask Flux", color="tab:red")
-            l2 = ax2.plot(dt_list, mask_fluxes, marker="x", linestyle="-", color="tab:red", label="Mask Flux")
+            l2 = ax2.plot(dt_list, mask_fluxes,
+                          marker="x", linestyle="-", color="tab:red",
+                          label="Mask Flux")
             ax2.tick_params(axis="y", labelcolor="tab:red")
 
             lines = l1 + l2
@@ -261,7 +264,9 @@ if st.button("Fetch Random Cluster Data"):
                 fig2, ax = plt.subplots(figsize=(6, 6))
                 ax.scatter(xs, ys, label="Pixels")
                 if centroid:
-                    ax.scatter(centroid[0], centroid[1], color="red", marker="x", s=100, label="Centroid")
+                    ax.scatter(centroid[0], centroid[1],
+                               color="red", marker="x", s=100,
+                               label="Centroid")
                 ax.set_title(f"Aperture for Cluster Label: {cluster_label}")
                 ax.set_xlabel("X coordinate")
                 ax.set_ylabel("Y coordinate")
