@@ -82,11 +82,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   airflow-webserver:
-    build: .
-    deploy:
-      resources:
-        limits:
-          memory: 4G
     image: apache/airflow:2.7.1
     container_name: airflow-webserver
     depends_on:
@@ -97,10 +92,11 @@ services:
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key_here
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
+      - ./wait_init.sh:/opt/airflow/wait_init.sh
     ports:
       - "8081:8080"
+    entrypoint: ["/opt/airflow/wait_init.sh"]
     command: webserver
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
@@ -123,7 +119,6 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
     command: scheduler
 
@@ -143,7 +138,6 @@ services:
     command: version
     volumes:
       - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
 
 volumes:
