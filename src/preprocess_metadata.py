@@ -13,6 +13,7 @@ This method avoids using a custom parser and converts the header directly via di
 from concurrent.futures import ThreadPoolExecutor
 import io
 import os
+import time
 from typing import Tuple, List
 import boto3
 from pymongo import MongoClient
@@ -81,6 +82,7 @@ def process_fits_file(file_key: str) -> None:
             # Remove the ".fits" extension from filename
             stored_filename = os.path.splitext(file_key)[0]
             metadata = {
+                "upload_time": time.time(),
                 "filename": stored_filename,
                 "primary_header": primary_header,
                 "secondary_header": secondary_header

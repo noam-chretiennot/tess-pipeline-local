@@ -7,10 +7,10 @@ from botocore.exceptions import ClientError
 from pymongo import MongoClient
 
 # Test configuration (TODO: move these settings to a config file)
-S3_ENDPOINT = "http://localhost:9000"
+S3_ENDPOINT = "http://minio:9000"
 ACCESS_KEY = "minio"
 SECRET_KEY = "test123minio"
-MONGO_URI = "mongodb://localhost:27017/"
+MONGO_URI = "mongodb://mongodb:27017/"
 
 
 def init_localstack(endpoint, access_key, secret_key):
@@ -46,14 +46,16 @@ def create_collection(mongo_uri):
     # Initialize fits_metadata collections
     meta_db = client["fits_metadata"]
     meta_coll = meta_db["metadata"]
+    meta_coll.create_index([("upload_time", 1)], unique=True)
 
     # Initialize stars collection
     stars_db = client["stars"]
     aperture_coll = stars_db["apertures"]
-    pixel_files_coll = stars_db["pixel_files"]
-
     aperture_coll.create_index([("centroid", "2d")], min=-360, max=360)
     aperture_coll.create_index([("cluster_label", 1)])
+
+    pixel_files_coll = stars_db["pixel_files"]
+    pixel_files_coll.create_index([("cluster_label", 1)])
 
     print("MongoDB collections and indexes initialized successfully.")
     return aperture_coll
