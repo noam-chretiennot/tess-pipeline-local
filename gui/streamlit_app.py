@@ -22,7 +22,7 @@ import os
 import io
 
 # --------------------- config -----------------------------
-BASE_URL = os.environ.get("API_URL", "http://minio:8000")
+BASE_URL = os.environ.get("API_URL", "http://localhost:8000")
 
 st.title("API Test Dashboard")
 
@@ -82,7 +82,7 @@ try:
     # Build selection lists with "All" option included
     cameras = ["All"] + sorted(meta_values.get("CAMERA", []))
     ccds = ["All"] + sorted(meta_values.get("CCD", []))
-    date_obs = ["All"] + sorted(meta_values.get("date_obs", []))
+    date_obs = ["All"] + sorted(meta_values.get("DATE-OBS", []))
 except Exception as e:
     st.error(f"Error fetching metadata values: {e}")
     cameras, ccds, date_obs = ["All"], ["All"], ["All"]
@@ -134,7 +134,7 @@ def display_file_image(bucket, key):
 st.header("Raw Bucket")
 with st.form("raw_filter_form"):
     # Create selectors for filtering raw bucket data
-    selected_date = st.selectbox("OBS_DATE", date_obs)
+    selected_date = st.selectbox("DATE-OBS", date_obs)
     selected_camera = st.selectbox("CAMERA", cameras)
     selected_ccd = st.selectbox("CCD", ccds)
     submitted = st.form_submit_button("Filter Raw")
@@ -150,7 +150,6 @@ with st.form("raw_filter_form"):
                 params["ccd"] = selected_ccd
 
             # Request raw bucket data
-            raw_response = requests.get(f"{BASE_URL}/raw", params=params).json()
             bucket = raw_response.get("bucket")
             st.write(f"Bucket: {bucket}")
             objects = raw_response.get("objects", [])
