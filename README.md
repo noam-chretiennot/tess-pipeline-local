@@ -7,7 +7,7 @@ This project is a reproduction of the TASSOC pipeline for processing Callibrated
 
 
 ## Architecture
-![Architecture](https://github.com/user-attachments/assets/27ac3ce6-276c-49f0-81f8-be1e4d9da19c)
+![Architecture schema](https://github.com/user-attachments/assets/d5fff64a-355b-49c6-aad6-8772029b1867)
 
 ### Technologies
 - **Image Storage**: MinIO
