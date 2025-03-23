@@ -1,0 +1,8 @@
+boto3
+pymongo
+astropy
+numpy
+scikit-learn
+dask
+scikit-image
+numba

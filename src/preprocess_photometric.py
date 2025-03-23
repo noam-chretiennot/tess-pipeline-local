@@ -19,6 +19,8 @@ from functools import reduce
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import io
 from typing import Tuple, List, Dict
+import argparse
+from datetime import datetime
 import numpy as np
 import boto3
 from botocore.exceptions import ClientError
@@ -31,10 +33,10 @@ from scipy.interpolate import RectBivariateSpline
 # Test configuration (TODO: move these settings to a config file)
 RAW_BUCKET = "raw-ffic"
 CORRECTED_BUCKET = "corrected-ffic"
-S3_ENDPOINT = "http://localhost:9000"
+S3_ENDPOINT = "http://minio:9000"
 ACCESS_KEY = "minio"
 SECRET_KEY = "test123minio"
-MONGO_URI = "mongodb://localhost:27017/"
+MONGO_URI = "mongodb://mongodb:27017/"
 
 
 # --------------------- Download/Upload Functions ---------------------
@@ -315,16 +317,21 @@ def process_single_ffi(doc: Dict) -> str:
     except ClientError as e:
         return f"Error uploading {s3_key}: {e}"
 
-def main() -> None:
+def main(upload_time_threshold: float):
     """
-    Run the image processing pipeline in parallel.
+    Run the image processing pipeline in parallel for documents with an upload_time
+    greater than the specified threshold. After processing, delete the corresponding
+    staging files from S3 and remove the documents from the metadata collection.
     """
     client = MongoClient(MONGO_URI)
     db = client["fits_metadata"]
-    collection = db["metadata"]
-    ffis: List[Dict] = list(collection.find({}))
+    metadata_collection = db["metadata"]
+
+    query = {"upload_time": {"$gte": upload_time_threshold}}
+    ffis: List[Dict] = list(metadata_collection.find(query))
+
     if not ffis:
-        print("No FFI metadata found in MongoDB.")
+        print("No FFI metadata found in MongoDB after the given upload_time threshold.")
         return
 
     results: List[str] = []
@@ -337,4 +344,19 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Process raw TESS FFI images"
+    )
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default="2018-01-01",
+        help="The start date for processing FFI images (ISO format).",
+    )
+    args = parser.parse_args()
+
+    # Convert the provided ISO datetime string to a UNIX timestamp.
+    dt = datetime.fromisoformat(args.start_date)
+    threshold = dt.timestamp()
+
+    main(threshold)

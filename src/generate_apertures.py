@@ -29,10 +29,10 @@ import boto3
 
 # Test configuration (TODO: move these settings to a config file)
 CORRECTED_BUCKET = "corrected-ffic"
-S3_ENDPOINT = "http://localhost:9000"
+S3_ENDPOINT = "http://minio:9000"
 ACCESS_KEY = "minio"
 SECRET_KEY = "test123minio"
-MONGO_URI = "mongodb://localhost:27017/"
+MONGO_URI = "mongodb://mongodb:27017/"
 
 
 # --------------------- Logging Configuration -------------------------
@@ -296,6 +296,8 @@ def main():
 
     db = client["stars"]
     collection = db["apertures"]
+    collection.delete_many({})
+
     for doc in files_to_process:
         clusters_dict = get_apertures(doc)
         res = collection.insert_many(clusters_dict)
