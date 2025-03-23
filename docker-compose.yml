@@ -38,8 +38,6 @@ services:
       context: ./api
     container_name: api
     depends_on:
-      - minio
-      - mongodb
       - init
     environment:
       AWS_ACCESS_KEY_ID: minio
@@ -59,7 +57,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8501:8501"
+      - "8080:8501"
 
   # init
   init:
@@ -80,28 +78,30 @@ services:
       - POSTGRES_DB=airflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   airflow-webserver:
     build: .
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-    image: apache/airflow:2.7.1
     container_name: airflow-webserver
     depends_on:
-      - postgres
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key_here
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
+      - logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/scripts
     ports:
       - "8081:8080"
-    command: webserver
+    command: airflow webserver
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -113,26 +113,27 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
-    image: apache/airflow:2.7.1
+          memory: 8G
     container_name: airflow-scheduler
     depends_on:
-      - airflow-webserver
+      airflow-init:
+        condition: service_completed_successfully
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
+      - logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
-    command: scheduler
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/scripts
+    command: airflow scheduler
 
   airflow-init:
     build: .
-    image: apache/airflow:2.7.1
     container_name: airflow-init
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -140,14 +141,16 @@ services:
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=airflow
       - _AIRFLOW_WWW_USER_PASSWORD=airflow
-    command: version
+    command: airflow version
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
+      - logs:/opt/airflow/logs
       - ./build:/opt/airflow/build
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/scripts
 
 volumes:
   mysql_data:
   postgres_data:
   minio_data:
   mongo_data:
+  logs:

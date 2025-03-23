@@ -15,9 +15,5 @@ RUN chown -R airflow:root /opt/airflow/build /opt/airflow/data/raw /opt/airflow/
 USER airflow
 
 # Copy requirement & install
-COPY build/reqs.txt /opt/airflow/build/reqs.txt
+COPY requirements.txt /opt/airflow/build/reqs.txt
 RUN pip install -r /opt/airflow/build/reqs.txt
-
-# Copy files for airflow use
-COPY build/*.py /opt/airflow/build/
-COPY src/*.py /opt/airflow/scripts/

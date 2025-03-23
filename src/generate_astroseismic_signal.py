@@ -18,10 +18,10 @@ from pymongo import MongoClient
 
 # Test configuration (TODO: move these settings to a config file)
 CORRECTED_BUCKET = "corrected-ffic"
-S3_ENDPOINT      = "http://localhost:9000"
+S3_ENDPOINT      = "http://minio:9000"
 ACCESS_KEY       = "minio"
 SECRET_KEY       = "test123minio"
-MONGO_URI = "mongodb://localhost:27017/"
+MONGO_URI = "mongodb://mongodb:27017/"
 META_DB = "fits_metadata"
 META_COLLECTION = "metadata"
 STARS_DB = "stars"
@@ -141,6 +141,8 @@ def main():
     meta_coll = meta_db[META_COLLECTION]
     stars_db = client[STARS_DB]
     pixel_files_coll = stars_db[PIXEL_FILES_COLLECTION]
+
+    pixel_files_coll.delete_many({})
 
     metadata_docs = list(meta_coll.find({}))
     if not metadata_docs:

@@ -22,7 +22,7 @@ import os
 import io
 
 # --------------------- config -----------------------------
-BASE_URL = os.environ.get("API_URL", "http://localhost:8000")
+BASE_URL = os.environ.get("API_URL", "http://minio:8000")
 
 st.title("API Test Dashboard")
 
