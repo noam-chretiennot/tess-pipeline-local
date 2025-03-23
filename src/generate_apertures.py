@@ -280,7 +280,7 @@ def main():
         {"$sort": {
             "secondary_header.CAMERA": 1,
             "secondary_header.CCD": 1,
-            "secondary_header.date_obs": 1
+            "secondary_header.DATE-OBS": 1
         }},
         {"$group": {
             "_id": {
